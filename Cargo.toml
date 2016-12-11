@@ -1,5 +1,5 @@
 [package]
-name = "json"
+name = "eventlogd"
 version = "0.1.0"
 authors = ["Josh Bassett <josh.bassett@gmail.com>"]
 
