@@ -6,9 +6,9 @@ use rustc_serialize::json::{self};
 use std::cmp;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::{BufReader, LineWriter, BufRead, Write};
+use std::io::{BufReader, LineWriter, SeekFrom, Error};
+use std::io::prelude::*;
 use std::thread;
-use zmq::SNDMORE;
 
 #[derive(RustcDecodable, RustcEncodable)]
 struct Entry {
@@ -17,68 +17,77 @@ struct Entry {
 	payload: String
 }
 
-fn get_next_id() -> u32 {
-    let fin = File::open("journal.txt").unwrap();
-    let mut reader = BufReader::new(fin);
+// Return the next ID in the journal.
+fn get_next_id() -> Result<u32, Error> {
+    let file = try!(File::open("journal.txt"));
+    let mut reader = BufReader::new(file);
     let mut buffer = String::new();
-    let mut max_id = 0;
+    let mut id = 0;
 
-    while reader.read_line(&mut buffer).unwrap() > 0 {
+    while try!(reader.read_line(&mut buffer)) > 0 {
         let entry: Entry = json::decode(&buffer).unwrap();
-        max_id = cmp::max(entry.id, max_id);
+        id = cmp::max(entry.id, id);
         buffer.clear();
     }
 
-    return max_id + 1;
+    Ok(id + 1)
 }
 
-fn main() {
-    let mut id = get_next_id();
+// Write journal entry.
+fn write_entry<W: Write>(writer: &mut LineWriter<W>, id: u32, payload: String) -> Result<(), Error> {
+    let timestamp = time::strftime("%Y-%m-%d %H:%M:%S.%f", &time::now()).unwrap();
 
+    let entry = Entry {
+        id: id,
+        timestamp: timestamp,
+        payload: payload
+    };
+
+    writeln!(writer, "{}", json::encode(&entry).unwrap())
+}
+
+// Read entries from journal and post events to S3.
+fn reader_thread() -> Result<(), Error> {
+    let mut file = try!(File::open("journal.txt"));
+
+    // Seek to the end of the file.
+    try!(file.seek(SeekFrom::End(0)));
+
+    let mut reader = BufReader::new(file);
+    let mut buffer = String::new();
+
+    loop {
+        while try!(reader.read_line(&mut buffer)) > 0 {
+            print!("{}", buffer);
+            buffer.clear();
+        }
+    }
+}
+
+fn journal_thread(mut id: u32) -> Result<(), Error> {
     let mut options = OpenOptions::new();
-    let fout = options.append(true).open("journal.txt").unwrap();
-    let mut writer = LineWriter::new(fout);
+    let file = try!(options.append(true).open("journal.txt"));
+    let mut writer = LineWriter::new(file);
 
     let context = zmq::Context::new();
-    let broker = context.socket(zmq::ROUTER).unwrap();
+    let broker = context.socket(zmq::REP).unwrap();
 
     assert!(broker.bind("tcp://*:5678").is_ok());
 
-    thread::spawn(|| {
-        let fin = File::open("journal.txt").unwrap();
-        let mut reader = BufReader::new(fin);
-        let mut buffer = String::new();
+    loop {
+        let payload = broker.recv_string(0).unwrap().unwrap();
+        try!(write_entry(&mut writer, id, payload));
+        broker.send(b"", 0).unwrap();
+        id += 1;
+    }
+}
 
-        loop {
-            while reader.read_line(&mut buffer).unwrap() > 0 {
-                print!("{}", buffer);
-                buffer.clear();
-            }
-        };
+fn main() {
+    let id = get_next_id().unwrap();
+
+    thread::spawn(|| {
+        reader_thread().unwrap();
     });
 
-    loop {
-        let identity = broker.recv_bytes(0).unwrap();
-        println!("identity: {:?}", identity);
-        broker.send(&identity, SNDMORE).unwrap();
-
-        broker.recv_bytes(0).unwrap();  // envelope delimiter
-
-        let payload = broker.recv_string(0).unwrap().unwrap();
-        println!("payload: {:?}", payload);
-        broker.send(b"", SNDMORE).unwrap();
-
-        let timestamp = time::strftime("%Y-%m-%d %H:%M:%S.%f", &time::now()).unwrap();
-        let entry = Entry {
-            id: id,
-            timestamp: timestamp,
-            payload: payload
-        };
-
-        write!(writer, "{}\n", json::encode(&entry).unwrap()).unwrap();
-
-        id += 1;
-
-        broker.send(b"", 0).unwrap();
-    }
+    journal_thread(id).unwrap();
 }
