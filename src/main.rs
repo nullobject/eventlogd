@@ -2,22 +2,39 @@ extern crate rustc_serialize;
 extern crate time;
 extern crate zmq;
 
-#[derive(RustcEncodable)]
+use rustc_serialize::json::{self};
+use std::cmp;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::{BufReader, LineWriter, BufRead, Write};
+use std::thread;
+use zmq::SNDMORE;
+
+#[derive(RustcDecodable, RustcEncodable)]
 struct Entry {
 	id: u32,
 	timestamp: String,
 	payload: String
 }
 
-fn main() {
-    use rustc_serialize::json::{self};
-    use std::fs::File;
-    use std::fs::OpenOptions;
-    use std::io::{BufReader, LineWriter, BufRead, Write};
-    use std::thread;
-    use zmq::SNDMORE;
+fn get_next_id() -> u32 {
+    let fin = File::open("journal.txt").unwrap();
+    let mut reader = BufReader::new(fin);
+    let mut buffer = String::new();
+    let mut max_id = 0;
 
-    let mut id = 1;
+    while reader.read_line(&mut buffer).unwrap() > 0 {
+        let entry: Entry = json::decode(&buffer).unwrap();
+        max_id = cmp::max(entry.id, max_id);
+        buffer.clear();
+    }
+
+    return max_id + 1;
+}
+
+fn main() {
+    let mut id = get_next_id();
+
     let mut options = OpenOptions::new();
     let fout = options.append(true).open("journal.txt").unwrap();
     let mut writer = LineWriter::new(fout);
@@ -64,5 +81,4 @@ fn main() {
 
         broker.send(b"", 0).unwrap();
     }
-
 }
