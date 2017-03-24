@@ -1,9 +1,15 @@
 [package]
 name = "eventlogd"
 version = "0.1.0"
-authors = ["Josh Bassett <josh.bassett@gmail.com>"]
+authors = ["Joshua Bassett <josh.bassett@gmail.com>"]
 
 [dependencies]
-rustc-serialize="0.3.22"
-time = "0.1.35"
-zmq = "0.8.0"
+env_logger = "0.4"
+hyper = "0.10.0"
+iron = "0.5"
+log = "0.3"
+router = "0.5"
+rusoto = {version = "0.23", features = ["s3"]}
+rust-lzma = "0.2"
+rustc-serialize="0.3"
+time = "0.1"
