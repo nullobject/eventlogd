@@ -8,7 +8,7 @@ extern crate time;
 /*
  * Represents an entry in the eventlog.
  */
-#[derive(RustcDecodable, RustcEncodable, Debug)]
+#[derive(Debug, RustcDecodable, RustcEncodable)]
 pub struct Entry {
 	pub id: u32,
 	pub timestamp: String,

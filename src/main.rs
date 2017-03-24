@@ -63,10 +63,11 @@ fn run() -> Result<(), Error> {
     // Receive message from server, journal it, and send to uploader.
     loop {
         let command = server_rx.recv().unwrap();
+
         match command {
             WriteEntry(entry) => {
                 write_entry_to_journal(&mut writer, &entry)?;
-                uploader_tx.send(entry).unwrap();
+                uploader_tx.send(WriteEntry(entry)).unwrap();
             }
         }
     }

@@ -17,6 +17,7 @@ use std::io::Error;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
+use command::Command::{self, WriteEntry};
 use entry::Entry;
 
 const GATEWAY_BUFFER_SIZE: usize = 5;
@@ -72,16 +73,21 @@ impl Gateway {
 }
 
 // Read payloads from queue and upload them.
-fn uploader(rx: Receiver<Entry>) -> Result<(), Error> {
+fn uploader(rx: Receiver<Command>) -> Result<(), Error> {
     let mut gateway = Gateway::new();
 
     loop {
-        let entry = rx.recv().unwrap();
-        gateway.write(entry).unwrap();
+        let command = rx.recv().unwrap();
+
+        match command {
+            WriteEntry(entry) => {
+                gateway.write(entry).unwrap();
+            }
+        }
     }
 }
 
-pub fn spawn_uploader(rx: Receiver<Entry>) -> Result<(), Error> {
+pub fn spawn_uploader(rx: Receiver<Command>) -> Result<(), Error> {
     thread::spawn(|| {
         uploader(rx).unwrap();
     });
