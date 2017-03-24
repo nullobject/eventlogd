@@ -14,11 +14,13 @@ use std::sync::mpsc::channel;
 
 mod command;
 mod entry;
+mod request;
 mod server;
 mod uploader;
 
-use command::Command::{WriteEntry, WriteData};
+use command::Command::WriteEntry;
 use entry::Entry;
+use request::Request::WriteData;
 use server::spawn_server;
 use uploader::spawn_uploader;
 
@@ -40,9 +42,9 @@ fn run() -> Result<()> {
     spawn_uploader(uploader_rx).unwrap();
 
     loop {
-        let command = server_rx.recv().unwrap();
+        let request = server_rx.recv().unwrap();
 
-        match command {
+        match request {
             WriteData(data) => {
                 let entry = create_entry(&conn, data);
                 uploader_tx.send(WriteEntry(entry)).unwrap();
