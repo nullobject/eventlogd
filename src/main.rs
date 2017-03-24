@@ -12,15 +12,13 @@ extern crate time;
 use rusqlite::{Connection, Result};
 use std::sync::mpsc::channel;
 
-mod command;
-mod entry;
-mod request;
+mod core;
 mod server;
 mod uploader;
 
-use command::Command::WriteEntry;
-use entry::Entry;
-use request::Request::WriteData;
+use core::Command::WriteEntry;
+use core::Entry;
+use core::Request::WriteData;
 use server::spawn_server;
 use uploader::spawn_uploader;
 

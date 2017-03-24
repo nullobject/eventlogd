@@ -17,8 +17,8 @@ use std::io::Error;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use command::Command::{self, WriteEntry};
-use entry::Entry;
+use core::Command::{self, WriteEntry};
+use core::Entry;
 
 const GATEWAY_BUFFER_SIZE: usize = 5;
 

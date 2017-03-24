@@ -13,7 +13,7 @@ use std::sync::mpsc::Sender;
 use std::sync::Mutex;
 use std::thread;
 
-use request::Request::{self, WriteData};
+use core::Request::{self, WriteData};
 
 struct ServerContext {
     tx: Mutex<Sender<Request>>
