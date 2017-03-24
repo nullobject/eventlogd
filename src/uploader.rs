@@ -36,7 +36,7 @@ impl Gateway {
         }
     }
 
-    // Write a payload to the buffer.
+    // Write a data to the buffer.
     fn write(&mut self, entry: Entry) -> Result<(), Error> {
         debug!("Writing {:?} to buffer", entry);
         if self.queue.len() >= GATEWAY_BUFFER_SIZE {
@@ -53,10 +53,10 @@ impl Gateway {
             let first = self.queue.first().unwrap();
             let last = self.queue.last().unwrap();
             // TODO: Is this the most idomatic way to do this?
-            let payload = self.queue
+            let data = self.queue
                 .iter()
-                .fold(String::new(), |acc, x| acc + &x.payload + "\n");
-            let compressed = compress(payload.as_bytes(), EXTREME_PRESET).unwrap();
+                .fold(String::new(), |acc, x| acc + &x.data + "\n");
+            let compressed = compress(data.as_bytes(), EXTREME_PRESET).unwrap();
             let filename = format!("{}-{}.xz", first.id, last.id);
             let req = PutObjectRequest {
                 bucket: "test.joshbassett.info".to_owned(),
@@ -72,7 +72,7 @@ impl Gateway {
     }
 }
 
-// Read payloads from queue and upload them.
+// Read data from queue and upload them.
 fn uploader(rx: Receiver<Command>) -> Result<(), Error> {
     let mut gateway = Gateway::new();
 
@@ -83,6 +83,7 @@ fn uploader(rx: Receiver<Command>) -> Result<(), Error> {
             WriteEntry(entry) => {
                 gateway.write(entry).unwrap();
             }
+            _ => {}
         }
     }
 }

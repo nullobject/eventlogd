@@ -2,5 +2,6 @@ use entry::Entry;
 
 #[derive(Debug)]
 pub enum Command {
-    WriteEntry(Entry)
+    WriteEntry(Entry),
+    WriteData(String)
 }
