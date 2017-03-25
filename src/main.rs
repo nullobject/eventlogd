@@ -1,6 +1,11 @@
 /*
  * Eventlog Daemon
  * Joshua Bassett, 2017
+ *
+ * TODO:
+ *   - Queue requests until they are processed. e.g. The `WriteData` request shouldn't succeeed
+ *   until it is journaled. A `GetRange` request shouldn't succeed until the data has been
+ *   retrieved from S3.
  */
 
 extern crate env_logger;
@@ -10,6 +15,7 @@ extern crate rusqlite;
 extern crate time;
 
 use rusqlite::{Connection, Result};
+use std::ops::Range;
 use std::sync::mpsc::channel;
 
 mod core;
@@ -28,6 +34,10 @@ fn create_entry(conn: &Connection, data: String) -> Entry {
     conn.execute("INSERT INTO entries (timestamp, data) VALUES (?, ?)", &[&timestamp, &data]).unwrap();
     let id = conn.last_insert_rowid();
     Entry { id: id, timestamp: timestamp, data: data }
+}
+
+fn delete_entries(conn: &Connection, range: Range<i64>) {
+    conn.execute("DELETE FROM entries WHERE id >= ? AND id <= ?", &[&range.start, &range.end]).unwrap();
 }
 
 fn run() -> Result<()> {
@@ -49,13 +59,15 @@ fn run() -> Result<()> {
                 let entry = create_entry(&conn, data);
                 uploader_in_tx.send(WriteEntry(entry)).unwrap();
             }
+            _ => {}
         }
 
         let response = uploader_out_rx.try_recv().unwrap();
 
         match response {
-            // TODO: Delete the entries from the DB.
-            DeleteRange(range) => {}
+            DeleteRange(range) => {
+                delete_entries(&conn, range);
+            }
             _ => {}
         }
     }

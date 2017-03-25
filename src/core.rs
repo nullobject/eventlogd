@@ -25,7 +25,8 @@ pub enum Command {
 
 #[derive(Debug)]
 pub enum Request {
-    WriteData(String)
+    WriteData(String),
+    GetRange(Range<i64>),
 }
 
 #[derive(Debug)]
