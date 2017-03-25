@@ -14,11 +14,12 @@ use self::lzma::{compress, EXTREME_PRESET};
 use self::rusoto::{DefaultCredentialsProvider, Region, default_tls_client};
 use self::rusoto::s3::{PutObjectRequest, S3Client};
 use std::io::Error;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Sender, Receiver};
 use std::thread;
 
 use core::Command::{self, WriteEntry};
 use core::Entry;
+use core::Response::{self, DeleteRange, Lol};
 
 const GATEWAY_BUFFER_SIZE: usize = 5;
 
@@ -37,18 +38,27 @@ impl Gateway {
     }
 
     // Write a data to the buffer.
-    fn write(&mut self, entry: Entry) -> Result<(), Error> {
-        debug!("Writing {:?} to buffer", entry);
+    fn write(&mut self, entry: Entry) -> Result<Response, Error> {
+        let mut response = Lol;
+
         if self.queue.len() >= GATEWAY_BUFFER_SIZE {
-            self.flush().unwrap();
+            response = self.flush().unwrap();
         }
+
+        debug!("Writing {:?} to buffer", entry);
+
+        // Enqueue the entry.
         self.queue.push(entry);
-        Ok(())
+
+        Ok(response)
     }
 
     // Flush the buffer to S3.
-    fn flush(&mut self) -> Result<(), Error> {
+    fn flush(&mut self) -> Result<Response, Error> {
+        let range;
+
         debug!("Flushing buffer to S3");
+
         {
             let first = self.queue.first().unwrap();
             let last = self.queue.last().unwrap();
@@ -57,6 +67,7 @@ impl Gateway {
                 .iter()
                 .fold(String::new(), |acc, x| acc + &x.data + "\n");
             let compressed = compress(data.as_bytes(), EXTREME_PRESET).unwrap();
+            range = first.id..last.id;
             let filename = format!("{}-{}.xz", first.id, last.id);
             let req = PutObjectRequest {
                 bucket: "test.joshbassett.info".to_owned(),
@@ -64,16 +75,21 @@ impl Gateway {
                 body: Some(compressed),
                 ..Default::default()
             };
+
             self.s3.put_object(&req).unwrap();
         }
+
+        // Clear the queue.
         self.queue.clear();
+
         debug!("Done!");
-        Ok(())
+
+        Ok(DeleteRange(range))
     }
 }
 
 // Read data from queue and upload them.
-fn uploader(rx: Receiver<Command>) -> Result<(), Error> {
+fn uploader(rx: Receiver<Command>, tx: Sender<Response>) -> Result<(), Error> {
     let mut gateway = Gateway::new();
 
     loop {
@@ -81,16 +97,16 @@ fn uploader(rx: Receiver<Command>) -> Result<(), Error> {
 
         match command {
             WriteEntry(entry) => {
-                gateway.write(entry).unwrap();
+                let response = gateway.write(entry).unwrap();
+                tx.send(response).unwrap()
             }
-            _ => {}
         }
     }
 }
 
-pub fn spawn_uploader(rx: Receiver<Command>) -> Result<(), Error> {
+pub fn spawn_uploader(rx: Receiver<Command>, tx: Sender<Response>) -> Result<(), Error> {
     thread::spawn(|| {
-        uploader(rx).unwrap();
+        uploader(rx, tx).unwrap();
     });
 
     Ok(())

@@ -20,11 +20,16 @@ pub struct Entry {
 
 #[derive(Debug)]
 pub enum Command {
-    WriteEntry(Entry),
-    DeleteRange(Range<i64>)
+    WriteEntry(Entry)
 }
 
 #[derive(Debug)]
 pub enum Request {
     WriteData(String)
+}
+
+#[derive(Debug)]
+pub enum Response {
+    DeleteRange(Range<i64>),
+    Lol
 }

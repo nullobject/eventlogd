@@ -19,6 +19,7 @@ mod uploader;
 use core::Command::WriteEntry;
 use core::Entry;
 use core::Request::WriteData;
+use core::Response::DeleteRange;
 use server::spawn_server;
 use uploader::spawn_uploader;
 
@@ -33,20 +34,28 @@ fn run() -> Result<()> {
     info!("Starting up...");
 
     let conn = Connection::open("eventlogd.db").unwrap();
-    let (server_tx, server_rx) = channel();
-    let (uploader_tx, uploader_rx) = channel();
+    let (server_out_tx, server_out_rx) = channel();
+    let (uploader_in_tx, uploader_in_rx) = channel();
+    let (uploader_out_tx, uploader_out_rx) = channel();
 
-    spawn_server(server_tx).unwrap();
-    spawn_uploader(uploader_rx).unwrap();
+    spawn_server(server_out_tx).unwrap();
+    spawn_uploader(uploader_in_rx, uploader_out_tx).unwrap();
 
     loop {
-        let request = server_rx.recv().unwrap();
+        let request = server_out_rx.recv().unwrap();
 
         match request {
             WriteData(data) => {
                 let entry = create_entry(&conn, data);
-                uploader_tx.send(WriteEntry(entry)).unwrap();
+                uploader_in_tx.send(WriteEntry(entry)).unwrap();
             }
+        }
+
+        let response = uploader_out_rx.try_recv().unwrap();
+
+        match response {
+            // TODO: Delete the entries from the DB.
+            DeleteRange(range) => {}
             _ => {}
         }
     }
