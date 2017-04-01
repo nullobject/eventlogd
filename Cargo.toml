@@ -4,12 +4,12 @@ version = "0.1.0"
 authors = ["Joshua Bassett <josh.bassett@gmail.com>"]
 
 [dependencies]
+chrono = "0.3"
 env_logger = "0.4"
 hyper = "0.10.0"
 iron = "0.5"
 log = "0.3"
 router = "0.5"
 rusoto = {version = "0.23", features = ["s3"]}
-rusqlite = "0.10"
+rusqlite = {version = "0.10", features = ["chrono"]}
 rust-lzma = "0.2"
-time = "0.1"

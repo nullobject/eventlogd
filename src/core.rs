@@ -3,10 +3,10 @@
  * Joshua Bassett, 2017
  */
 
-extern crate time;
+// extern crate time;
 
 use std::ops::Range;
-use time::Timespec;
+use chrono::{DateTime, UTC};
 
 /**
  * Represents an entry in the eventlog.
@@ -14,7 +14,7 @@ use time::Timespec;
 #[derive(Debug)]
 pub struct Entry {
 	pub id: i64,
-	pub timestamp: Timespec,
+	pub timestamp: DateTime<UTC>,
 	pub data: String
 }
 

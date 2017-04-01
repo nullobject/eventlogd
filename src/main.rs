@@ -8,11 +8,11 @@
  *   retrieved from S3.
  */
 
+extern crate chrono;
 extern crate env_logger;
 #[macro_use] extern crate log;
 #[macro_use] extern crate router;
 extern crate rusqlite;
-extern crate time;
 
 use rusqlite::{Connection, Result};
 use std::ops::Range;
@@ -30,16 +30,23 @@ use server::spawn_server;
 use uploader::spawn_uploader;
 
 fn create_entry(conn: &Connection, data: String) -> Entry {
-    let timestamp = time::get_time();
-    conn.execute("INSERT INTO entries (timestamp, data) VALUES (?, ?)", &[&timestamp, &data]).unwrap();
+    conn.execute("INSERT INTO entries (data) VALUES (?)", &[&data]).unwrap();
     let id = conn.last_insert_rowid();
-    Entry { id: id, timestamp: timestamp, data: data }
+    conn.query_row("SELECT id, timestamp, data FROM entries WHERE id = ?", &[&id], |row| {
+        Entry {
+            id: row.get(0),
+            timestamp: row.get(1),
+            data: row.get(2)
+        }
+    }).unwrap()
 }
 
 fn delete_entries(conn: &Connection, range: Range<i64>) {
     conn.execute("DELETE FROM entries WHERE id >= ? AND id <= ?", &[&range.start, &range.end]).unwrap();
 }
 
+// FIXME: We can't rely on processing these messages continuously because the queues block while
+// waiting.
 fn run() -> Result<()> {
     info!("Starting up...");
 
@@ -52,24 +59,36 @@ fn run() -> Result<()> {
     spawn_uploader(uploader_in_rx, uploader_out_tx).unwrap();
 
     loop {
-        let request = server_out_rx.recv().unwrap();
+        let server_request = server_out_rx.try_recv();
 
-        match request {
-            WriteData(data) => {
-                let entry = create_entry(&conn, data);
-                uploader_in_tx.send(WriteEntry(entry)).unwrap();
+        if server_request.is_ok() {
+            let request = server_request.unwrap();
+
+            match request {
+                WriteData(data) => {
+                    let entry = create_entry(&conn, data);
+                    uploader_in_tx.send(WriteEntry(entry)).unwrap();
+                }
+                _ => {}
             }
-            _ => {}
         }
 
-        let response = uploader_out_rx.try_recv().unwrap();
+        let uploader_response = uploader_out_rx.try_recv();
 
-        match response {
-            DeleteRange(range) => {
-                delete_entries(&conn, range);
+        if uploader_response.is_ok() {
+            let response = uploader_response.unwrap();
+            trace!("3");
+
+            match response {
+                DeleteRange(range) => {
+                    delete_entries(&conn, range);
+                }
+                _ => {}
             }
-            _ => {}
         }
+
+        let ten_millis = std::time::Duration::from_millis(10);
+        std::thread::sleep(ten_millis);
     }
 }
 
