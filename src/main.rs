@@ -3,9 +3,13 @@
  * Joshua Bassett, 2017
  *
  * TODO:
- *   - Queue requests until they are processed. e.g. The `WriteData` request shouldn't succeeed
+ *
+ * - Queue requests until they are processed. e.g. The `WriteData` request shouldn't succeeed
  *   until it is journaled. A `GetRange` request shouldn't succeed until the data has been
  *   retrieved from S3.
+ *
+ * - Load the journal into the queue when the server restarts.
+ *
  */
 
 extern crate chrono;

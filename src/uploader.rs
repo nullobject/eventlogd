@@ -1,8 +1,6 @@
 /*
  * Eventlog Daemon
  * Joshua Bassett, 2017
- *
- * TODO: Load the journal into the queue when the server restarts.
  */
 
 extern crate lzma;
