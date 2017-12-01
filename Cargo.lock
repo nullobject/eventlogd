@@ -1,18 +1,3 @@
-[root]
-name = "eventlogd"
-version = "0.1.0"
-dependencies = [
- "chrono 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "hyper 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "iron 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "router 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusoto 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusqlite 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust-lzma 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
 [[package]]
 name = "Inflector"
 version = "0.7.0"
@@ -130,6 +115,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "traitobject 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "typeable 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "eventlogd"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iron 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "router 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusqlite 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust-lzma 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
